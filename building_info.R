@@ -97,3 +97,4 @@ colSums(is.na(dlvry_df)) #13673
 write.csv(shop_df, file = "/Users/yj.noh/Documents/GitHub/prj-ML-model-LT_OV30/address/shop_final.csv", fileEncoding = "cp949", row.names = FALSE)
 write.csv(dlvry_df, file = "/Users/yj.noh/Documents/GitHub/prj-ML-model-LT_OV30/address/dlvry_final.csv", fileEncoding = "cp949", row.names = FALSE)
 
+
