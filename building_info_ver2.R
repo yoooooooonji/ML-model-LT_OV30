@@ -36,3 +36,29 @@ data5 <- read.csv("/Users/yj.noh/Documents/GitHub/prj-ML-model-LT_OV30/address/�
 
 total_data <- rbind(data1, data2, data3, data4, data5)
 write.csv(total_data, "/Users/yj.noh/Documents/GitHub/prj-ML-model-LT_OV30/address/건축물대장_all.csv", row.names = FALSE, fileEncoding = "cp949")
+
+
+# 3. 픽업지/전달지 na 값 -> 채워넣기
+total_data <- read.csv("/Users/yj.noh/Documents/GitHub/prj-ML-model-LT_OV30/address/건축물대장_all.csv", fileEncoding= "cp949")
+str(total_data)
+total_data <- total_data[(c("주용도코드명", "대지위치"))]
+head(total_data)
+
+shop_df <- read.csv("/Users/yj.noh/Documents/GitHub/prj-ML-model-LT_OV30/address/shop_final.csv", fileEncoding= "cp949")
+dlvry_df <- read.csv("/Users/yj.noh/Documents/GitHub/prj-ML-model-LT_OV30/address/dlvry_final.csv", fileEncoding= "cp949")
+
+colSums(is.na(shop_df)) #212 / 1482
+colSums(is.na(dlvry_df)) #13668
+
+shop_df <- shop_df  %>% left_join(total_data, by = c("Address" = "대지위치"))
+dlvry_df <- dlvry_df  %>% left_join(total_data, by = c("Address" = "대지위치"))
+
+
+shop_df <- shop_df  %>% mutate(건물용도명_2 = ifelse(is.na(건물용도명), 주용도코드명, 건물용도명))
+dlvry_df <- dlvry_df  %>% mutate(건물용도명_2 = ifelse(is.na(건물용도명), 주용도코드명, 건물용도명))
+
+colSums(is.na(shop_df))
+colSums(is.na(dlvry_df))
+
+write.csv(shop_df, file = "/Users/yj.noh/Documents/GitHub/prj-ML-model-LT_OV30/address/shop_final.csv", fileEncoding = "cp949", row.names = FALSE)
+write.csv(dlvry_df, file = "/Users/yj.noh/Documents/GitHub/prj-ML-model-LT_OV30/address/dlvry_final.csv", fileEncoding = "cp949", row.names = FALSE)
