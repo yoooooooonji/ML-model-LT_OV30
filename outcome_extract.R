@@ -25,19 +25,71 @@ optimal_cutpoint=function(x){
    result=(-log(1/y-1)-b0)/b1
    result
 } 
+
+holiday_list = ymd(c("2022-01-01", "2022-01-31", "2022-02-01", "2022-03-01", "2022-03-09",  "2022-05-05", "2022-05-08", "2022-06-01", "2022-06-06", "2022-08-15", "2022-09-09", "2022-09-10", "2022-09-11", "2022-09-12", 
+"2022-10-03",  "2022-10-09", "2022-10-10", "2022-12-25", "2023-01-01", "2023-01-21","2023-01-22", "2023-01-23", "2023-01-24", "2023-03-01", "2023-05-01", "2023-05-05","2023-05-27", "2023-05-29", "2023-06-06", "2023-08-15", "2023-09-28", "2023-09-29",
+"2023-09-30", "2023-10-03", "2023-10-09", "2023-12-25"))
+
+par(family ="AppleGothic")
+
 ##########################################################################################################################################################
 # 1. data load
-#data <- read.csv("raw_data_time.csv", fileEncoding = "cp949")
 data <- read_excel("prj-ML-model-LT_OV30/raw_data_time.xlsx")
-head(data)
+dim(data) #115,823
 colSums(is.na(data))
 
 # 2. 데이터 정제
-data <- data %>% mutate(chk = ifelse((추천노출시간_Ai + 추천노출시간_일반 + 추천미발생시간유 + 추천미발생시간무 + 배차후취소시간) < 전체배차시간, 1,0))
-table(data$chk) # 90,616, 25,352 
+summary(data)
+
+data <- data  %>% filter(추천미발생시간유 >= 0.0)
+dim(data) #115,803
+
+data <- data %>% mutate(chk = ifelse((추천노출시간_AI + 추천노출시간_일반 + 추천미발생시간유 + 추천미발생시간무 + 배차후취소시간) < 전체배차시간, 1,0))   
+
+table(data$chk) # 90,620, 25,183
 
 data_filter <- data  %>% filter(chk == 0)
-dim(data_filter) #90,616 
+dim(data_filter) #90,620
+
+##########################################################################################################################################################
+# 3. 요일, 공휴일 여부 추가 
+data_filter <- data_filter  %>% mutate(day_of_week = substr(weekdays(as.Date(business_day)),1,3)) 
+data_filter <- data_filter  %>% mutate(is_holiday = ifelse(business_day %in% holiday_list | day_of_week %in% c("금요일", "토요일", "일요일"),1,0))
+
+table(data_filter$is_holiday) #50592, 40028
+
+##########################################################################################################################################################
+# 4. 라이더 노출 시간 boxplot
+data_filter$reg_hour <- as.factor(data_filter$reg_hour)
+
+group_data <- data_filter %>% group_by(reg_hour)
+
+ggplot(group_data, aes(x = reg_hour, y = per_no_recomm)) +
+  geom_boxplot() +
+  labs(x = "reg_hour", y = "미노출시간비율") +
+  ggtitle("reg_hour별 미노출시간비율 boxplot")
+
+
+a_plot  <- boxplot(data_filter$per_display) #노출시간 
+a_plot$stats
+
+plot(data_filter$per_display) #노출
+plot(data_filter$per_no_recomm) #미노출
+
+summary(data_filter)
+test<- data_filter %>% filter(per_no_recomm == 100.0)
+dim(test) #913건 
+
+data_filter$per_no_recomm <- as.numeric(data_filter$per_no_recomm)
+data_2 <- data_filter %>% filter(data_filter$per_display > 0.0)
+dim(data_2)
+summary(data_2$per_no_recomm)
+
+a_plot  <- boxplot(data_2$per_no_recomm) #미노출시간 
+a_plot$stats
+
+b <- boxplot(data_2$per_display) #노출시간 
+b$stats
 
 # 2-1 
 data_filter <- data_filter  %>% mutate(output_10 = ifelse(notiOver_min_max >= 10,1,0),
@@ -49,8 +101,6 @@ table(data_filter$output_10) # 2720
 table(data_filter$output_20) #600
 
 # 3. 전체배차시간 - 고안시 roc
-# 함수
-
 png("boxplot_전처리전.png")
 boxplot(전체배차시간 ~ notiOver, data = data_filter, col = "orange")
 dev.off()
@@ -96,7 +146,6 @@ dev.off()
 
 optimal_lr.eta(roc_1)
 optimal_cutpoint(roc_1) # 6.51
-
 
 # output_10으로 테스트
 t_plot <- boxplot(전체배차시간 ~ output_10, data = data_filter, col = "orange")
@@ -150,9 +199,6 @@ dev.off()
 
 optimal_lr.eta(roc_1)
 optimal_cutpoint(roc_1) # 8.21
-
-
-
 
 
 
