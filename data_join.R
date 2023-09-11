@@ -25,6 +25,7 @@ colSums(is.na(pick_floor)) #784개
 # 2. raw_data + dlvry / pick 건물용도명 join
 data <- read_excel("/Users/yj.noh/Documents/GitHub/prj-ML-model-LT_OV30/raw_data_time.xlsx")
 dim(data) #115823
+colSums(is.na(data))
 
 # 2.1 픽업지 join
 data <- data  %>% left_join(pick_floor[c("shop_no", "floor", "rgn2_nm", "rgn3_nm", "shop_category","건물용도명_2", "Address")], by  = "shop_no")
@@ -56,12 +57,15 @@ data <- data  %>% rename("dlvry_address" = "Address",
                           "dlvry_지하층수" = "지하층수_min",
                           "dlvry_건물용도" = "건물용도명_2")
 
-write.csv(data, "prj-ML-model-LT_OV30/raw_data_final.csv", fileEncoding = "cp949")
+
+
+cols_to_replace_na <- c("pick_floor", "pick_rgn2_nm", "pick_rgn3_nm", "pick_category", "pick_건물용도", "pick_address", "dlvry_address", "dlvry_지상층수", "dlvry_지하층수", "dlvry_건물용도")
+data[cols_to_replace_na][data[cols_to_replace_na] == "NA"] <- NA
 
 colSums(is.na(data))
 dim(data)
 
-
+write.csv(data, "prj-ML-model-LT_OV30/raw_data_final.csv", fileEncoding = "utf-8", row.names = FALSE)
 
 
 
