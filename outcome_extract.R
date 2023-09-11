@@ -34,16 +34,24 @@ par(family ="AppleGothic")
 
 ##########################################################################################################################################################
 # 1. data load
-data <- read_excel("prj-ML-model-LT_OV30/raw_data_time.xlsx")
+data <- read_excel("prj-ML-model-LT_OV30/raw_data_final.xlsx")
+#data <- read_csv("prj-ML-model-LT_OV30/raw_data_final.csv", fileEncoding = "utf-8")
+
 dim(data) #115,823
 colSums(is.na(data))
 
-# 2. 데이터 정제
-summary(data)
+cols_to_replace_na <- c("pick_floor", "pick_rgn2_nm", "pick_rgn3_nm", "pick_category", "pick_건물용도", "pick_address", "dlvry_address", "dlvry_지상층수", "dlvry_지하층수", "dlvry_건물용도")
+data[cols_to_replace_na][data[cols_to_replace_na] == "NA"] <- NA
+colSums(is.na(data))
 
+#write.csv(data,"prj-ML-model-LT_OV30/raw_data_final2.csv", fileEncoding = "cp949", row.names = FALSE, na="")
+
+# 2. 데이터 정제
+# 추천미발생시간유 > 0 
 data <- data  %>% filter(추천미발생시간유 >= 0.0)
 dim(data) #115,803
 
+# sum < 전체배차시간
 data <- data %>% mutate(chk = ifelse((추천노출시간_AI + 추천노출시간_일반 + 추천미발생시간유 + 추천미발생시간무 + 배차후취소시간) < 전체배차시간, 1,0))   
 
 table(data$chk) # 90,620, 25,183
@@ -60,35 +68,33 @@ table(data_filter$is_holiday) #50592, 40028
 
 ##########################################################################################################################################################
 # 4. 라이더 노출 시간 boxplot
+
 data_filter$reg_hour <- as.factor(data_filter$reg_hour)
 
 group_data <- data_filter %>% group_by(reg_hour)
 
-ggplot(group_data, aes(x = reg_hour, y = per_no_recomm)) +
+group_data_summary <- group_data %>%
+  summarize(q1 = quantile(per_no_recomm, 0.25),
+            q3 = quantile(per_no_recomm, 0.75))
+
+b_plot <- ggplot(group_data, aes(x = reg_hour, y = per_no_recomm)) +
   geom_boxplot() +
   labs(x = "reg_hour", y = "미노출시간비율") +
-  ggtitle("reg_hour별 미노출시간비율 boxplot")
+  ggtitle("reg_hour별 미노출시간비율 boxplot") +
+  geom_text(data = group_data_summary, aes(label = paste("q1:", q1, "\nq3:", q3), x = reg_hour, y = q3), vjust = -1, hjust = -1)
 
-a_plot  <- boxplot(data_filter$per_display) #노출시간 
-a_plot$stats
 
-plot(data_filter$per_display) #노출
-plot(data_filter$per_no_recomm) #미노출
+data_filter_2 <- data_filter  %>% left_join(group_data_summary, by = "reg_hour")
+head(data_filter_2)
 
-summary(data_filter)
-test<- data_filter %>% filter(per_no_recomm == 100.0)
-dim(test) #913건 
+data_filter_2 <- data_filter_2  %>% filter(per_no_recomm <= q3)
+dim(data_filter_2)
+colSums(is.na(data_filter_2))
 
-data_filter$per_no_recomm <- as.numeric(data_filter$per_no_recomm)
-data_2 <- data_filter %>% filter(data_filter$per_display > 0.0)
-dim(data_2)
-summary(data_2$per_no_recomm)
+data_final <- data_filter_2  %>% filter(!is.na(dlvry_건물용도) & !is.na(pick_건물용도))
+dim(data_final) # 44776
 
-a_plot  <- boxplot(data_2$per_no_recomm) #미노출시간 
-a_plot$stats
-
-b <- boxplot(data_2$per_display) #노출시간 
-b$stats
+write.csv(data_final, "prj-ML-model-LT_OV30/modeling_data.csv", fileEncoding = "utf-8", na = "")
 
 # 2-1 
 data_filter <- data_filter  %>% mutate(output_10 = ifelse(notiOver_min_max >= 10,1,0),

@@ -65,7 +65,7 @@ data[cols_to_replace_na][data[cols_to_replace_na] == "NA"] <- NA
 colSums(is.na(data))
 dim(data)
 
-write.csv(data, "prj-ML-model-LT_OV30/raw_data_final.csv", fileEncoding = "utf-8", row.names = FALSE)
+write.csv(data, "prj-ML-model-LT_OV30/raw_data_final.csv", fileEncoding = "utf-8", row.names = FALSE, na= "")
 
 
 
