@@ -69,7 +69,6 @@ ggplot(group_data, aes(x = reg_hour, y = per_no_recomm)) +
   labs(x = "reg_hour", y = "미노출시간비율") +
   ggtitle("reg_hour별 미노출시간비율 boxplot")
 
-
 a_plot  <- boxplot(data_filter$per_display) #노출시간 
 a_plot$stats
 
