@@ -232,22 +232,44 @@ optimal_cutpoint(roc_1) # 5.25
 
 ##########################################################################################################################################################
 # 6. output 결정짓기 -> 고안시 초과 10분 결정짓는 값보다 크면 장미배
-value <- optimal_cutpoint(roc_1) # 4.4
-
+value <- optimal_cutpoint(roc_1) # 4.95
+value
 dim(data_rm)
-data_rm <- data_rm  %>% mutate(outcome = ifelse(전체배차시간 >=value ,1, 0))
-table(data_rm$outcome) #57909, 10118
+data_rm <- data_rm  %>% mutate(outcome = ifelse(전체배차시간 >= value ,1, 0))
+table(data_rm$outcome) # 58981, 9046
 
 input_val <- c("dlvry_id","reg_hour", "ord_price", "actual_dlvry_distance", "pick_floor", "pick_rgn3_nm","pick_category","pick_건물용도","dlvry_address",
 "dlvry_지상층수", "dlvry_지하층수", "dlvry_건물용도", "day_of_week", "is_holiday", "outcome")
 model_df <- data_rm[input_val] 
 
-write.csv(model_df, "modeling_data.csv", fileEncoding = "utf-8", row.names = FALSE)
-model_df <- model_df %>% filter(!is.na(pick_건물용도) & !is.na(dlvry_건물용도))
-dim(model_df) # 44776
+name_list <- c("pick_건물용도", "dlvry_건물용도")
+model_df[name_list][model_df[name_list]=="NA"] <- NA
+colSums(is.na(model_df))
 
+#write.csv(model_df, "modeling_data.csv", fileEncoding = "utf-8", row.names = FALSE ,na = "")
+
+##########################################################################################################################################################
+# 7. modeling 
+
+model_df <- read_excel("prj-ML-model-LT_OV30/modeling_data.xlsx")
+
+dim(model_df) # 44776
+colSums(is.na(model_df))
 str(model_df)
-model_df$pick_floor <- as.factor(model_df$pick_floor)
-model_df$pick_rgn3_nm <- as.factor(model_df$pick_rgn3_nm)
 
 val_name = c("pick_floor", "pick_rgn3_nm", "pick_category", "pick_건물용도", "dlvry_지상층수", "dlvry_지하층수", "dlvry_건물용도", "day_of_week", "is_holiday", "outcome")
+model_df[val_name] <- lapply(model_df[val_name], as.factor)
+str(model_df)
+
+model_df <- subset(model_df, select = -c(dlvry_id, dlvry_address))
+
+# 변수 전처리 
+model1 <- glm(outcome ~., data = model_df, family = binomial)
+
+# Predicting the Test set results
+prob_pred = predict(, type = 'response', newdata = test_set[-3])
+y_pred = ifelse(prob_pred > 0.5, 1, 0)
+
+# Making the Confusion Matrix
+cm = table(test_set[, 3], y_pred > 0.5)
+
