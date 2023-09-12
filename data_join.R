@@ -12,7 +12,6 @@ pkg <- c("readr", "MatchIt", "dplyr", "tidytext", "tidyverse", "lubridate", "res
 ipak(pkg)
 ##########################################################################################################################################################
 # 1. pick_floor data + 건물용도명 join
-#data <- read.csv("/Users/yj.noh/Documents/GitHub/prj-ML-model-LT_OV30/pick_floor_data.csv", fileEncoding = "cp949")
 pick_floor <- read_excel("/Users/yj.noh/Documents/GitHub/prj-ML-model-LT_OV30/pick_floor_data.xls")
 pick_info <- read_excel("/Users/yj.noh/Documents/GitHub/prj-ML-model-LT_OV30/address/shop_final.xls")
 
@@ -46,7 +45,6 @@ str(data)
 
 dlvry$Latitude <- sprintf("%.7f", dlvry$Latitude)
 dlvry$Longitude <- sprintf("%.7f", dlvry$Longitude)
-
 data$dlvry_loc_pnt_lat <- sprintf("%.7f", data$dlvry_loc_pnt_lat)
 data$dlvry_loc_pnt_lon <- sprintf("%.7f", data$dlvry_loc_pnt_lon)
 
@@ -62,7 +60,7 @@ data <- data  %>% rename("dlvry_address" = "Address",
 cols_to_replace_na <- c("pick_floor", "pick_rgn2_nm", "pick_rgn3_nm", "pick_category", "pick_건물용도", "pick_address", "dlvry_address", "dlvry_지상층수", "dlvry_지하층수", "dlvry_건물용도")
 data[cols_to_replace_na][data[cols_to_replace_na] == "NA"] <- NA
 
-colSums(is.na(data))
+colSums(is.na(data)) # 13010, 30375
 dim(data)
 
 write.csv(data, "prj-ML-model-LT_OV30/raw_data_final.csv", fileEncoding = "utf-8", row.names = FALSE, na= "")

@@ -11,7 +11,7 @@ ipak <-function(pkg){
 pkg <- c("readr", "MatchIt", "dplyr", "tidytext", "tidyverse", "lubridate", "reshape2", "psych", "gtsummary", "readxl", "MASS", "pROC", "Epi") # nolint
 ipak(pkg)
 ##########################################################################################################################################################
-# 함수
+# function
 optimal_lr.eta=function(x){
   no=which.max(x$res$sens+x$res$spec)[1]
   result=x$res$lr.eta[no]
@@ -38,14 +38,14 @@ data <- read_excel("prj-ML-model-LT_OV30/raw_data_final.xlsx")
 #data <- read_csv("prj-ML-model-LT_OV30/raw_data_final.csv", fileEncoding = "utf-8")
 
 dim(data) #115,823
-colSums(is.na(data))
+colSums(is.na(data)) # 13010, 30375
 
-cols_to_replace_na <- c("pick_floor", "pick_rgn2_nm", "pick_rgn3_nm", "pick_category", "pick_건물용도", "pick_address", "dlvry_address", "dlvry_지상층수", "dlvry_지하층수", "dlvry_건물용도")
-data[cols_to_replace_na][data[cols_to_replace_na] == "NA"] <- NA
-colSums(is.na(data))
+# cols_to_replace_na <- c("pick_floor", "pick_rgn2_nm", "pick_rgn3_nm", "pick_category", "pick_건물용도", "pick_address", "dlvry_address", "dlvry_지상층수", "dlvry_지하층수", "dlvry_건물용도")
+# data[cols_to_replace_na][data[cols_to_replace_na] == "NA"] <- NA
 
-#write.csv(data,"prj-ML-model-LT_OV30/raw_data_final2.csv", fileEncoding = "cp949", row.names = FALSE, na="")
+#write.csv(data,"prj-ML-model-LT_OV30/raw_data_final2.csv", fileEncoding = "utf-8", row.names = FALSE, na="")
 
+##########################################################################################################################################################
 # 2. 데이터 정제
 # 추천미발생시간유 > 0 
 data <- data  %>% filter(추천미발생시간유 >= 0.0)
@@ -68,7 +68,7 @@ table(data_filter$is_holiday) #50592, 40028
 
 ##########################################################################################################################################################
 # 4. 라이더 노출 시간 boxplot
-
+# 알뜰 : 묶음 대기시간 존재 
 data_filter$reg_hour <- as.factor(data_filter$reg_hour)
 
 group_data <- data_filter %>% group_by(reg_hour)
@@ -81,36 +81,42 @@ b_plot <- ggplot(group_data, aes(x = reg_hour, y = per_no_recomm)) +
   geom_boxplot() +
   labs(x = "reg_hour", y = "미노출시간비율") +
   ggtitle("reg_hour별 미노출시간비율 boxplot") +
-  geom_text(data = group_data_summary, aes(label = paste("q1:", q1, "\nq3:", q3), x = reg_hour, y = q3), vjust = -1, hjust = -1)
+ geom_text(data = group_data_summary, aes(label = paste("q1:", q1, "\nq3:", q3), x = reg_hour, y = q3), vjust = -1, hjust = -1)
 
+#ggsave("/Users/yj.noh/Documents/GitHub/prj-ML-model-LT_OV30/graph/boxplot_시간대별_미노출비율.png")
 
-data_filter_2 <- data_filter  %>% left_join(group_data_summary, by = "reg_hour")
-head(data_filter_2)
+data_rm <- data_filter  %>% left_join(group_data_summary, by = "reg_hour")
+head(data_rm)
 
-data_filter_2 <- data_filter_2  %>% filter(per_no_recomm <= q3)
-dim(data_filter_2)
-colSums(is.na(data_filter_2))
+data_rm <- data_rm %>% filter(per_no_recomm <= q3)
+dim(data_rm) # 68,027
+colSums(is.na(data_rm))  # 7634, 17651 
 
-data_final <- data_filter_2  %>% filter(!is.na(dlvry_건물용도) & !is.na(pick_건물용도))
-dim(data_final) # 44776
+##########################################################################################################################################################
+#data_final <- data_rm %>% filter(!is.na(dlvry_건물용도) & !is.na(pick_건물용도))
+#dim(data_final) # 44776
 
-write.csv(data_final, "prj-ML-model-LT_OV30/modeling_data.csv", fileEncoding = "utf-8", na = "")
+#write.csv(data_final, "prj-ML-model-LT_OV30/modeling_data.csv", fileEncoding = "utf-8", na = "")
 
-# 2-1 
-data_filter <- data_filter  %>% mutate(output_10 = ifelse(notiOver_min_max >= 10,1,0),
+##########################################################################################################################################################
+# 5. 전체배차시간 - 고안시 roc 
+
+data_rm <- data_rm %>% mutate(output_10 = ifelse(notiOver_min_max >= 10,1,0),
                          output_20 = ifelse(notiOver_min_max >= 20, 1,0),
                          output_5 = ifelse(notiOver_min_max >=5,1,0))
 
-table(data_filter$output_5) #5991
-table(data_filter$output_10) # 2720
-table(data_filter$output_20) #600
+table(data_rm$output_5) # 4226
+table(data_rm$output_10) # 1932
+table(data_rm$output_20) # 453
 
-# 3. 전체배차시간 - 고안시 roc
-png("boxplot_전처리전.png")
-boxplot(전체배차시간 ~ notiOver, data = data_filter, col = "orange")
-dev.off()
+data_rm$notiOver <- as.factor(data_rm$notiOver)
+data_rm$output_5 <- as.factor(data_rm$output_5)
+data_rm$output_10 <- as.factor(data_rm$output_10)
+data_rm$output_20 <- as.factor(data_rm$output_20)
 
-b_plot <- boxplot(전체배차시간 ~ notiOver, data = data_filter, col = "orange")
+##########################################################################################################################################################
+# 5-1. 고안시 < 배달시간 
+b_plot <- boxplot(전체배차시간 ~ notiOver, data = data_rm, col = "orange")
 boxplot_stats <- data.frame(
   Min = b_plot$stats[1, ],
   Q1 = b_plot$stats[2, ],
@@ -119,27 +125,14 @@ boxplot_stats <- data.frame(
   Max = b_plot$stats[5, ]
 )
 print(boxplot_stats)
-max <- b_plot$stats[5,]
-max_0 <- as.numeric(max[1])
-max_1 <- as.numeric(max[2])
-max_0 
-max_1
+max_0 <- as.numeric(b_plot$stats[5,][1])
+max_1 <- as.numeric(b_plot$stats[5,][2])
 
-# 3-1. ouput_5 
-f_plot <- boxplot(전체배차시간 ~ output_5, data = data_filter, col = "orange")
-max <- f_plot$stats[5,]
-max_0 <- as.numeric(max[1])
-max_1 <- as.numeric(max[2])
-max_0 #7.03
-max_1 # 46.98
+roc_df <- data_rm  %>% filter((notiOver == 0 & 전체배차시간 <= max_0) | (notiOver == 1 & 전체배차시간 <= max_1))
+roc_1 <- ROC(form = notiOver ~ 전체배차시간, data= roc_df, plot= "ROC")
+roc_2 <- roc(roc_df$notiOver, roc_df$전체배차시간)
 
-data_rm <- data_filter %>% filter((output_5 == 0 & 전체배차시간 <= max_0) | (output_5 == 1 & 전체배차시간 <= max_1))
-dim(data_rm) # 81350
-
-roc_1<- ROC(form = output_5 ~ 전체배차시간, data = data_rm, plot = "ROC")
-roc_2<- roc(data_rm$output_5, data_rm$전체배차시간)
-
-tiff("prj-ML-model-LT_OV30/graph/ROC_curve_ov5.png", width = 1200, height = 1200)   
+tiff("prj-ML-model-LT_OV30/graph/ROC_over.png", width = 1200, height = 1200)   
 plot.roc(roc_2,   
          col="red",   
          print.auc = TRUE,   
@@ -147,26 +140,28 @@ plot.roc(roc_2,
          print.thres = TRUE, print.thres.pch=19, print.thres.col = "red",   
          auc.polygon = TRUE, auc.polygon.col="#D1F2EB")   
 dev.off()  
-
-
 optimal_lr.eta(roc_1)
-optimal_cutpoint(roc_1) # 6.51
+optimal_cutpoint(roc_1) # 2.58
 
-# output_10으로 테스트
-t_plot <- boxplot(전체배차시간 ~ output_10, data = data_filter, col = "orange")
-max <- t_plot$stats[5,]
-max_0 <- as.numeric(max[1])
-max_1 <- as.numeric(max[2])
-max_0 #7.7
-max_1 # 51.7
+##########################################################################################################################################################
+# 5.2. 고안시 초과 5분 
+b_plot <- boxplot(전체배차시간 ~ output_5, data = data_rm, col = "orange")
+boxplot_stats <- data.frame(
+  Min = b_plot$stats[1, ],
+  Q1 = b_plot$stats[2, ],
+  Median = b_plot$stats[3, ],
+  Q3 = b_plot$stats[4, ],
+  Max = b_plot$stats[5, ]
+)
+print(boxplot_stats)
+max_0 <- as.numeric(b_plot$stats[5,][1])
+max_1 <- as.numeric(b_plot$stats[5,][2])
 
-data_rm <- data_filter %>% filter((output_10 == 0 & 전체배차시간 <= max_0) | (output_10== 1 & 전체배차시간 <= max_1))
-dim(data_rm) # 80779
+roc_df<- data_rm  %>% filter((output_5 == 0 & 전체배차시간 <= max_0) | (output_5 == 1 & 전체배차시간 <= max_1))
+roc_1 <- ROC(form = output_5 ~ 전체배차시간, data= roc_df, plot= "ROC")
+roc_2 <- roc(roc_df$output_5, roc_df$전체배차시간)
 
-roc_1<- ROC(form = output_10 ~ 전체배차시간, data = data_rm, plot = "ROC")
-roc_2<- roc(data_rm$output_10, data_rm$전체배차시간)
-
-tiff("prj-ML-model-LT_OV30/graph/ROC_curve_ov10.png", width = 1200, height = 1200)   
+tiff("prj-ML-model-LT_OV30/graph/ROC_over5.png", width = 1200, height = 1200)   
 plot.roc(roc_2,   
          col="red",   
          print.auc = TRUE,   
@@ -174,26 +169,28 @@ plot.roc(roc_2,
          print.thres = TRUE, print.thres.pch=19, print.thres.col = "red",   
          auc.polygon = TRUE, auc.polygon.col="#D1F2EB")   
 dev.off()  
-
-
 optimal_lr.eta(roc_1)
-optimal_cutpoint(roc_1) # 7.66
+optimal_cutpoint(roc_1) # 4.4
 
-# output_20으로 테스트
-t_plot <- boxplot(전체배차시간 ~ output_20, data = data_filter, col = "orange")
-max <- t_plot$stats[5,]
-max_0 <- as.numeric(max[1])
-max_1 <- as.numeric(max[2])
-max_0 # 8.28
-max_1 # 61.53
+##########################################################################################################################################################
+# 5.3. 고안시 초과 10분 
+b_plot <- boxplot(전체배차시간 ~ output_10, data = data_rm, col = "orange")
+boxplot_stats <- data.frame(
+  Min = b_plot$stats[1, ],
+  Q1 = b_plot$stats[2, ],
+  Median = b_plot$stats[3, ],
+  Q3 = b_plot$stats[4, ],
+  Max = b_plot$stats[5, ]
+)
+print(boxplot_stats)
+max_0 <- as.numeric(b_plot$stats[5,][1])
+max_1 <- as.numeric(b_plot$stats[5,][2])
 
-data_rm <- data_filter %>% filter((output_20 == 0 & 전체배차시간 <= max_0) | (output_20== 1 & 전체배차시간 <= max_1))
-dim(data_rm) # 80026
+roc_df<- data_rm  %>% filter((output_10 == 0 & 전체배차시간 <= max_0) | (output_10 == 1 & 전체배차시간 <= max_1))
+roc_1 <- ROC(form = output_10 ~ 전체배차시간, data= roc_df, plot= "ROC")
+roc_2 <- roc(roc_df$output_10, roc_df$전체배차시간)
 
-roc_1<- ROC(form = output_20 ~ 전체배차시간, data = data_rm, plot = "ROC")
-roc_2<- roc(data_rm$output_20, data_rm$전체배차시간)
-
-tiff("prj-ML-model-LT_OV30/graph/ROC_curve_ov20.png", width = 1200, height = 1200)   
+tiff("prj-ML-model-LT_OV30/graph/ROC_over10.png", width = 1200, height = 1200)   
 plot.roc(roc_2,   
          col="red",   
          print.auc = TRUE,   
@@ -201,16 +198,56 @@ plot.roc(roc_2,
          print.thres = TRUE, print.thres.pch=19, print.thres.col = "red",   
          auc.polygon = TRUE, auc.polygon.col="#D1F2EB")   
 dev.off()  
-
 optimal_lr.eta(roc_1)
-optimal_cutpoint(roc_1) # 8.21
+optimal_cutpoint(roc_1) # 4.95
 
+##########################################################################################################################################################
+# 5.4. 고안시 초과 20분 
+b_plot <- boxplot(전체배차시간 ~ output_20, data = data_rm, col = "orange")
+boxplot_stats <- data.frame(
+  Min = b_plot$stats[1, ],
+  Q1 = b_plot$stats[2, ],
+  Median = b_plot$stats[3, ],
+  Q3 = b_plot$stats[4, ],
+  Max = b_plot$stats[5, ]
+)
+print(boxplot_stats)
+max_0 <- as.numeric(b_plot$stats[5,][1])
+max_1 <- as.numeric(b_plot$stats[5,][2])
 
+roc_df<- data_rm  %>% filter((output_20 == 0 & 전체배차시간 <= max_0) | (output_20 == 1 & 전체배차시간 <= max_1))
+roc_1 <- ROC(form = output_20 ~ 전체배차시간, data= roc_df_1, plot= "ROC")
+roc_2 <- roc(roc_df$output_20, roc_df$전체배차시간)
 
+tiff("prj-ML-model-LT_OV30/graph/ROC_over20.png", width = 1200, height = 1200)   
+plot.roc(roc_2,   
+         col="red",   
+         print.auc = TRUE,   
+         max.auc.polygon = TRUE,   
+         print.thres = TRUE, print.thres.pch=19, print.thres.col = "red",   
+         auc.polygon = TRUE, auc.polygon.col="#D1F2EB")   
+dev.off()  
+optimal_lr.eta(roc_1)
+optimal_cutpoint(roc_1) # 5.25
 
+##########################################################################################################################################################
+# 6. output 결정짓기 -> 고안시 초과 10분 결정짓는 값보다 크면 장미배
+value <- optimal_cutpoint(roc_1) # 4.4
 
+dim(data_rm)
+data_rm <- data_rm  %>% mutate(outcome = ifelse(전체배차시간 >=value ,1, 0))
+table(data_rm$outcome) #57909, 10118
 
+input_val <- c("dlvry_id","reg_hour", "ord_price", "actual_dlvry_distance", "pick_floor", "pick_rgn3_nm","pick_category","pick_건물용도","dlvry_address",
+"dlvry_지상층수", "dlvry_지하층수", "dlvry_건물용도", "day_of_week", "is_holiday", "outcome")
+model_df <- data_rm[input_val] 
 
+write.csv(model_df, "modeling_data.csv", fileEncoding = "utf-8", row.names = FALSE)
+model_df <- model_df %>% filter(!is.na(pick_건물용도) & !is.na(dlvry_건물용도))
+dim(model_df) # 44776
 
+str(model_df)
+model_df$pick_floor <- as.factor(model_df$pick_floor)
+model_df$pick_rgn3_nm <- as.factor(model_df$pick_rgn3_nm)
 
-
+val_name = c("pick_floor", "pick_rgn3_nm", "pick_category", "pick_건물용도", "dlvry_지상층수", "dlvry_지하층수", "dlvry_건물용도", "day_of_week", "is_holiday", "outcome")
