@@ -12,17 +12,35 @@ pkg <- c("readr", "MatchIt", "dplyr", "tidytext", "tidyverse", "lubridate", "res
 ipak(pkg)
 ##########################################################################################################################################################
 
-data <- read_excel('prj-ML-model-LT_OV30/modeling_data_final.xlsx')
+data <- read_excel('/Users/yj.noh/Documents/GitHub/prj-ML-model-LT_OV30/modeling_data_final.xlsx')
 head(data) 
 
-cols <- c('reg_hour', 'pick_floor', 'pick_rgn3_nm', 'pick_category', 'pick_건물용도', 'dlvry_지상층수', 'dlvry_건물용도', 'day_of_week', 'is_holiday', 'dlvry_rgn2_nm', 'dlvry_rgn3_nm', 'outcome')
+cols <- c('reg_hour', 'pick_floor',  'pick_category', 'pick_건물용도', 'dlvry_지상층수', 'dlvry_건물용도', 'day_of_week', 'is_holiday', 'dlvry_rgn2_nm',  'outcome')
 
 for (col in cols) {
   data[[col]] <- as.factor(data[[col]])
 }
 
-str(data)
+#str(data)
 
+# tbl_summary
+# data %>% 
+# # tbl_strata(
+# #     strata = outcome,~.x  %>% 
+#     tbl_summary(
+#         by = outcome,
+#         type = all_continuous() ~ "continuous2",
+#               statistic = all_continuous() ~ c("{mean} ({sd})", "{min}, {max}"),
+#               missing_text = "(Missing value)", 
+#               digits = list(all_continuous() ~ c(0, 1), 
+#                             all_categorical() ~ c(0, 1))) %>%
+#   add_overall() %>%
+#   add_p(pvalue_fun = ~style_pvalue(., digits = 3)) %>%
+#   bold_labels()
+
+
+
+# #scale
 num_vars <- c('ord_price', 'actual_dlvry_distance', 'dlvry_지하층수', '기온', '강수량')
 data[, num_vars] <- scale(data[,num_vars])
 
@@ -46,7 +64,11 @@ accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
 sensitivity <- conf_matrix[2, 2] / (conf_matrix[2, 1] + conf_matrix[2, 2])
 specificity <- conf_matrix[1, 1] / (conf_matrix[1, 1] + conf_matrix[1, 2])
 
-cat("Confusion Matrix:\n", conf_matrix, "\n")
-cat("Accuracy:", accuracy, "\n")
-cat("Sensitivity (True Positive Rate):", sensitivity, "\n")
-cat("Specificity (True Negative Rate):", specificity, "\n")
+conf_matrix
+accuracy
+sensitivity
+specificity
+
+
+result <- summary(glm1)
+write.csv(result, "glm_result.csv", fileEncoding = "cp949", row.names =FALSE)
