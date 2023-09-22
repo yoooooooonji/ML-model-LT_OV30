@@ -25,7 +25,7 @@ library(haven)
 ```
 
 ```{r,warning = FALSE, message = FALSE}
-source("/Users/yj.noh/Documents/GitHub/prj-ML-model-LT_OV30/glm.R")
+source("/Users/yj.noh/Documents/GitHub/prj-ML-model-LT_OV30/R_code/glm.R")
 ```
 
 ###  **[Table 1.1] **Summary of input varaiables analysts** {.tabset}
