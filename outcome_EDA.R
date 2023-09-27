@@ -20,11 +20,12 @@ dim(data)
 
 data <- data %>% mutate(is_holiday = ifelse(is_holiday == TRUE, 1,0))
 
+
 df <- subset(data, select = c(ord_price, 전체배차시간, actual_dlvry_distance,기온, is_holiday,
 pick_floor, reg_hour, pick_category, pick_건물용도, dlvry_지상층수,  dlvry_건물용도,y_pred_new, KMeansCluster ))
 
 df$KMeansCluster <- factor(df$KMeansCluster, level = c(0,2,1,3))
-
+df$reg_hour <- factor(df$reg_hour)
 df %>%
   tbl_summary(
     by = KMeansCluster,
@@ -39,7 +40,7 @@ df %>%
     )
   ) %>%
   add_overall() %>%
-  add_p(pvalue_fun = ~style_pvalue(., digits = 3)) %>%
+  add_p(pvalue_fun = ~ style_pvalue(., digits = 3)) %>%
   bold_labels()
 
 
