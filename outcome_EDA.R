@@ -20,7 +20,6 @@ dim(data)
 
 data <- data %>% mutate(is_holiday = ifelse(is_holiday == TRUE, 1,0))
 
-
 df <- subset(data, select = c(ord_price, 전체배차시간, actual_dlvry_distance,기온, is_holiday,
 pick_floor, reg_hour, pick_category, pick_건물용도, dlvry_지상층수,  dlvry_건물용도,y_pred_new, KMeansCluster ))
 
